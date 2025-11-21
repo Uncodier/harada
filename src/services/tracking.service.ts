@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { TaskWithLogs } from '@/types/app.types';
+import { TaskWithLogs, Task } from '@/types/app.types';
+import { Database } from '@/types/database.types';
+
+type LogInsert = Database['public']['Tables']['logs']['Insert'];
+type TaskRow = Database['public']['Tables']['tasks']['Row'];
 
 export async function logTaskEntry(
   taskId: string,
@@ -9,17 +13,16 @@ export async function logTaskEntry(
 ) {
   const supabase = await createClient();
 
-  const { error } = await supabase.from('logs').upsert(
-    {
-      task_id: taskId,
-      value,
-      notes: notes || null,
-      logged_at: loggedAt || new Date().toISOString().split('T')[0],
-    },
-    {
-      onConflict: 'task_id,logged_at',
-    }
-  );
+  const logData: LogInsert = {
+    task_id: taskId,
+    value,
+    notes: notes || null,
+    logged_at: loggedAt || new Date().toISOString().split('T')[0],
+  };
+
+  const { error } = await supabase.from('logs').upsert(logData as any, {
+    onConflict: 'task_id,logged_at',
+  });
 
   if (error) {
     throw new Error(`Failed to log entry: ${error.message}`);
@@ -51,8 +54,18 @@ export async function getTaskWithLogs(taskId: string): Promise<TaskWithLogs | nu
     throw new Error(`Failed to fetch logs: ${logsError.message}`);
   }
 
+  const taskRow = task as TaskRow;
+  const taskData: Task = {
+    id: taskRow.id,
+    name: taskRow.name,
+    description: taskRow.description,
+    tracking_type: taskRow.tracking_type,
+    unit: taskRow.unit,
+    position: taskRow.position,
+  };
+
   return {
-    ...task,
+    ...taskData,
     logs: logs || [],
   };
 }
@@ -93,7 +106,7 @@ export async function getTodayCompletedTaskIds(gridId: string): Promise<Set<stri
     throw new Error(`Failed to fetch tasks: ${tasksError?.message}`);
   }
 
-  const taskIds = tasks.map((t) => t.id);
+  const taskIds = (tasks as Array<{ id: string }>).map((t) => t.id);
 
   // Get today's completed logs for these tasks
   const { data: logs, error: logsError } = await supabase
@@ -107,7 +120,7 @@ export async function getTodayCompletedTaskIds(gridId: string): Promise<Set<stri
     throw new Error(`Failed to fetch today's completions: ${logsError.message}`);
   }
 
-  return new Set(logs?.map((log) => log.task_id) || []);
+  return new Set((logs as Array<{ task_id: string }> | null)?.map((log) => log.task_id) || []);
 }
 
 export async function getPillarProgress(pillarId: string, days: number = 30) {
@@ -128,7 +141,7 @@ export async function getPillarProgress(pillarId: string, days: number = 30) {
   }
 
   // Get logs for all tasks in this pillar
-  const taskIds = tasks.map((t) => t.id);
+  const taskIds = (tasks as Array<{ id: string }>).map((t) => t.id);
   const { data: logs, error: logsError } = await supabase
     .from('logs')
     .select('task_id, value, logged_at')
@@ -143,7 +156,7 @@ export async function getPillarProgress(pillarId: string, days: number = 30) {
   // Calculate average progress per day
   const dailyProgress: Record<string, number> = {};
 
-  logs?.forEach((log) => {
+  (logs as Array<{ task_id: string; value: number; logged_at: string }> | null)?.forEach((log) => {
     if (!dailyProgress[log.logged_at]) {
       dailyProgress[log.logged_at] = 0;
     }
@@ -176,7 +189,7 @@ export async function getAllPillarsProgress(gridId: string, days: number = 30) {
 
   // Get progress for each pillar
   const progressData = await Promise.all(
-    pillars.map(async (pillar) => {
+    (pillars as Array<{ id: string; name: string }>).map(async (pillar) => {
       const progress = await getPillarProgress(pillar.id, days);
       const averageProgress =
         progress.length > 0
