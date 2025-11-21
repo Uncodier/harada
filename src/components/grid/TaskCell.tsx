@@ -1,0 +1,55 @@
+'use client';
+
+import { Task } from '@/types/app.types';
+import { useState } from 'react';
+
+interface TaskCellProps {
+  task: Task;
+  onClick?: () => void;
+  className?: string;
+}
+
+export function TaskCell({ task, onClick, className = '' }: TaskCellProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      className={`
+        relative p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer
+        bg-white/90 backdrop-blur-sm
+        ${task.tracking_type === 'boolean' 
+          ? 'border-blue-300 hover:border-blue-500 hover:bg-blue-50/50' 
+          : 'border-green-300 hover:border-green-500 hover:bg-green-50/50'}
+        ${isHovered ? 'scale-105 shadow-xl -translate-y-1' : 'hover:shadow-lg hover:-translate-y-0.5'}
+        ${className}
+      `}
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="text-xs font-bold text-gray-900 mb-1.5 leading-tight">{task.name}</div>
+      {task.description && (
+        <div className="text-xs text-gray-600 line-clamp-2 leading-relaxed mb-2">{task.description}</div>
+      )}
+      <div className="mt-2 flex items-center gap-2 flex-wrap">
+        <span
+          className={`
+          text-xs px-2 py-1 rounded-lg font-semibold
+          ${task.tracking_type === 'boolean' 
+            ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+            : 'bg-green-100 text-green-700 border border-green-200'}
+        `}
+        >
+          {task.tracking_type === 'boolean' ? '✓ Habit' : '# Metric'}
+        </span>
+        {task.unit && (
+          <span className="text-xs text-gray-500 font-medium">{task.unit}</span>
+        )}
+      </div>
+      {isHovered && (
+        <div className={`absolute inset-0 rounded-xl pointer-events-none ${task.tracking_type === 'boolean' ? 'bg-gradient-to-br from-blue-500/10 to-transparent' : 'bg-gradient-to-br from-green-500/10 to-transparent'}`}></div>
+      )}
+    </div>
+  );
+}
+
