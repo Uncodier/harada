@@ -234,14 +234,14 @@ IMPORTANT:
     } catch (zodError) {
       if (zodError instanceof z.ZodError) {
         console.error('Zod validation error:', {
-          errors: zodError.errors,
+          errors: zodError.issues,
           rawResponse: jsonText,
           parsedResponse: parsed,
           sanitizedResponse: sanitized,
         });
         
         // Build detailed error message
-        const errorDetails = zodError.errors.map(err => {
+        const errorDetails = zodError.issues.map(err => {
           const path = err.path.join('.');
           return `  - ${path}: ${err.message}`;
         }).join('\n');
