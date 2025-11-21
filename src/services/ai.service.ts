@@ -85,8 +85,8 @@ IMPORTANT: Return ONLY valid JSON, no markdown, no code blocks, just the raw JSO
     if (error instanceof Error) {
       console.error('Error details:', {
         message: error.message,
-        hasApiKey: !!process.env.OPENAI_API_KEY,
-        apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 7),
+        hasApiKey: !!process.env.AI_GATEWAY_API_KEY,
+        apiKeyPrefix: process.env.AI_GATEWAY_API_KEY?.substring(0, 7),
       });
     }
     
